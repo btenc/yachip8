@@ -1,0 +1,9 @@
+#ifndef INTERPRETER_HEADER
+#define INTERPRETER_HEADER
+
+enum interpreter_state {
+    INTERPRETER_QUIT,
+    INTERPRETER_RUNNING,
+    INTERPRETER_PAUSED,
+};
+#endif
