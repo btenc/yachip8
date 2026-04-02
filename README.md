@@ -29,13 +29,13 @@ $ ./yachip8 ROM_FILE
 - **CC0 CHIP-8 Games**: https://johnearnest.github.io/chip8Archive/
 
 ## Supported Instructions
-### Standard Chip-8 Instructions
+### Standard CHIP-8 Instructions
 ```
 [x] 00E0 - CLS               [ ] 8xy0 - LD Vx, Vy          [ ] Ex9E - SKP Vx
-[ ] 00EE - RET               [ ] 8xy1 - OR Vx, Vy          [ ] ExA1 - SKNP Vx
-[ ] 0nnn - SYS addr          [ ] 8xy2 - AND Vx, Vy         [ ] Fx07 - LD Vx, DT
+[x] 00EE - RET               [ ] 8xy1 - OR Vx, Vy          [ ] ExA1 - SKNP Vx
+[*] 0nnn - SYS addr          [ ] 8xy2 - AND Vx, Vy         [ ] Fx07 - LD Vx, DT
 [x] 1nnn - JP addr           [ ] 8xy3 - XOR Vx, Vy         [ ] Fx0A - LD Vx, K
-[ ] 2nnn - CALL addr         [ ] 8xy4 - ADD Vx, Vy         [ ] Fx15 - LD DT, Vx
+[x] 2nnn - CALL addr         [ ] 8xy4 - ADD Vx, Vy         [ ] Fx15 - LD DT, Vx
 [ ] 3xkk - SE Vx, byte       [ ] 8xy5 - SUB Vx, Vy         [ ] Fx18 - LD ST, Vx
 [ ] 4xkk - SNE Vx, byte      [ ] 8xy6 - SHR Vx {, Vy}      [ ] Fx1E - ADD I, Vx
 [ ] 5xy0 - SE Vx, Vy         [ ] 8xy7 - SUBN Vx, Vy        [ ] Fx29 - LD F, Vx
@@ -44,6 +44,7 @@ $ ./yachip8 ROM_FILE
 [x] Annn - LD I, addr        [ ] Bnnn - JP V0, addr        [ ] Fx65 - LD Vx, [I]
 [ ] Cxkk - RND Vx, byte      [x] Dxyn - DRW Vx, Vy, nibble
 ```
+*`0nnn` is ignored on modern interpreters (it would call a subroutine on the host machine).
 
 ## Resources
 - **CHIP-8 Technical Reference**: http://devernay.free.fr/hacks/chip8/C8TECH10.HTM
@@ -51,7 +52,5 @@ $ ./yachip8 ROM_FILE
 - **SDL2 Documentation**: https://wiki.libsdl.org/SDL2/
 
 - **More info about CHIP-8 and its extensions**: https://chip-8.github.io/links/
-
-- **CHIP-8 archive**: https://github.com/JohnEarnest/chip8Archive
 
 

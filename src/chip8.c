@@ -101,18 +101,35 @@ void chip8_step(struct chip8* c8)
     switch (opcode_type) {
 
     case 0x0:
-        if (nnn == 0x0E0) { // 00E0 - CLS
+        if (opcode == 0x00E0) { // 00E0 - CLS
             for (size_t i = 0; i < DISPLAY_SIZE; i++) {
                 c8->display[i] = 0;
             }
             c8->should_redraw = true;
-        } else {
-            fprintf(stderr, "E: unknown opcode %04X\n", opcode);
+        } else if (opcode == 0x00EE) { // 00EE - RET
+            if (c8->sp <= 0) {
+                fprintf(stderr, "E: stack underflow\n");
+            } else {
+                c8->sp--;
+                c8->pc = c8->stack[c8->sp]; // pop
+            }
+        } else { // 0nnn - SYS addr (legacy, ignored)
+            // do nothing
         }
         break;
 
     case 0x1: // 1nnn - JP addr
         c8->pc = nnn;
+        break;
+
+    case 0x2: // 2nnn - CALL addr
+        if (c8->sp >= STACK_SIZE) {
+            fprintf(stderr, "E: stack overflow\n");
+        } else {
+            c8->stack[c8->sp] = c8->pc; // push
+            c8->sp++;
+            c8->pc = nnn;
+        }
         break;
 
     case 0x6: // 6xkk - LD Vx, byte
