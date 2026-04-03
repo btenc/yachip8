@@ -15,15 +15,13 @@ struct interpreter_config {
     struct window_config window;
 };
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
     struct chip8 c8;
     enum interpreter_state state = INTERPRETER_RUNNING;
 
     const struct interpreter_config config = {
-        { 10, 16 },
-        { 24, { 255, 255, 255, 255 }, { 0, 0, 0, 255 } }
-    };
+        {10, 16}, {24, {255, 255, 255, 255}, {0, 0, 0, 255}}};
 
     if (argc != 2) {
         fprintf(stderr, "Usage: %s ROM_FILE\n", argv[0]);

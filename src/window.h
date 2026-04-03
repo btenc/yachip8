@@ -13,9 +13,9 @@ struct window_config {
     SDL_Color bg_color;
 };
 
-bool window_init(const struct window_config* config);
-void window_handle_events(enum interpreter_state* state);
-void window_draw(const struct chip8* c8);
+bool window_init(const struct window_config *config);
+void window_handle_events(enum interpreter_state *state);
+void window_draw(const struct chip8 *c8);
 void window_destroy(void);
 
 #endif
