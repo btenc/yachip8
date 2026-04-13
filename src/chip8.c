@@ -108,12 +108,14 @@ void chip8_step(struct chip8 *c8)
             }
             c8->should_redraw = true;
         } else if (opcode == 0x00EE) { /* 00EE - RET */
-            if (c8->sp <= 0) {
+            if (c8->sp == 0) {
                 fprintf(stderr, "E: stack underflow\n");
-            } else {
-                c8->sp--;
-                c8->pc = c8->stack[c8->sp]; /* pop */
+                break;
             }
+
+            c8->sp--;
+            c8->pc = c8->stack[c8->sp]; /* pop */
+
         } else { /* 0nnn - SYS addr (legacy, ignored) */
                  /* do nothing */
         }
@@ -126,10 +128,34 @@ void chip8_step(struct chip8 *c8)
     case 0x2: /* 2nnn - CALL addr */
         if (c8->sp >= STACK_SIZE) {
             fprintf(stderr, "E: stack overflow\n");
-        } else {
-            c8->stack[c8->sp] = c8->pc; /* push */
-            c8->sp++;
-            c8->pc = nnn;
+            break;
+        }
+
+        c8->stack[c8->sp] = c8->pc; /* push */
+        c8->sp++;
+        c8->pc = nnn;
+        break;
+
+    case 0x3: /* 3xkk - SKP E Vx, byte */
+        if (c8->V[x] == kk) {
+            c8->pc += 2;
+        }
+        break;
+
+    case 0x4: /* 4xkk - SKP NE Vx, byte */
+        if (c8->V[x] != kk) {
+            c8->pc += 2;
+        }
+        break;
+
+    case 0x5: /* 5xy0 - SKP E Vx, Vy */
+        if (n != 0) {
+            fprintf(stderr, "E: unknown opcode %04X\n", opcode);
+            break;
+        }
+
+        if (c8->V[x] == c8->V[y]) {
+            c8->pc += 2;
         }
         break;
 
@@ -139,6 +165,17 @@ void chip8_step(struct chip8 *c8)
 
     case 0x7: /* 7xkk - ADD Vx, byte */
         c8->V[x] += kk;
+        break;
+
+    case 0x9: /* 9xy0 - SKP NE Vx, Vy */
+        if (n != 0) {
+            fprintf(stderr, "E: unknown opcode %04X\n", opcode);
+            break;
+        }
+
+        if (c8->V[x] != c8->V[y]) {
+            c8->pc += 2;
+        }
         break;
 
     case 0xA: /* Annn - LD I, addr */

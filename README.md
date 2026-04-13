@@ -36,11 +36,11 @@ $ ./yachip8 ROM_FILE
 [*] 0nnn - SYS addr          [ ] 8xy2 - AND Vx, Vy         [ ] Fx07 - LD Vx, DT
 [x] 1nnn - JP addr           [ ] 8xy3 - XOR Vx, Vy         [ ] Fx0A - LD Vx, K
 [x] 2nnn - CALL addr         [ ] 8xy4 - ADD Vx, Vy         [ ] Fx15 - LD DT, Vx
-[ ] 3xkk - SE Vx, byte       [ ] 8xy5 - SUB Vx, Vy         [ ] Fx18 - LD ST, Vx
-[ ] 4xkk - SNE Vx, byte      [ ] 8xy6 - SHR Vx {, Vy}      [ ] Fx1E - ADD I, Vx
-[ ] 5xy0 - SE Vx, Vy         [ ] 8xy7 - SUBN Vx, Vy        [ ] Fx29 - LD F, Vx
+[x] 3xkk - SE Vx, byte       [ ] 8xy5 - SUB Vx, Vy         [ ] Fx18 - LD ST, Vx
+[x] 4xkk - SNE Vx, byte      [ ] 8xy6 - SHR Vx {, Vy}      [ ] Fx1E - ADD I, Vx
+[x] 5xy0 - SE Vx, Vy         [ ] 8xy7 - SUBN Vx, Vy        [ ] Fx29 - LD F, Vx
 [x] 6xkk - LD Vx, byte       [ ] 8xyE - SHL Vx {, Vy}      [ ] Fx33 - LD B, Vx
-[x] 7xkk - ADD Vx, byte      [ ] 9xy0 - SNE Vx, Vy         [ ] Fx55 - LD [I], Vx
+[x] 7xkk - ADD Vx, byte      [x] 9xy0 - SNE Vx, Vy         [ ] Fx55 - LD [I], Vx
 [x] Annn - LD I, addr        [ ] Bnnn - JP V0, addr        [ ] Fx65 - LD Vx, [I]
 [ ] Cxkk - RND Vx, byte      [x] Dxyn - DRW Vx, Vy, nibble
 ```
