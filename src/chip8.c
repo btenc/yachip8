@@ -167,6 +167,72 @@ void chip8_step(struct chip8 *c8)
         c8->V[x] += kk;
         break;
 
+    case 0x8: {       /* Logical and arithmetic instructions */
+        if (n == 0) { /* 8xy0 - LD Vx, Vy */
+            c8->V[x] = c8->V[y];
+
+        } else if (n == 1) { /* 8xy1 - OR Vx, Vy */
+            c8->V[x] = c8->V[x] | c8->V[y];
+
+        } else if (n == 2) { /* 8xy2 - AND Vx, Vy */
+            c8->V[x] = c8->V[x] & c8->V[y];
+
+        } else if (n == 3) { /* 8xy3 - XOR Vx, Vy */
+            c8->V[x] = c8->V[x] ^ c8->V[y];
+
+        } else if (n == 4) { /* 8xy4 - ADD Vx, Vy */
+            uint16_t sum = (uint16_t)c8->V[x] + c8->V[y];
+            uint8_t flag;
+            if (sum > 0xFF) {
+                flag = 1; /* carry: result overflowed 8 bits */
+            } else {
+                flag = 0;
+            }
+            c8->V[x] = (uint8_t)sum;
+            c8->V[0xF] = flag;
+
+        } else if (n == 5) { /* 8xy5 - SUB Vx, Vy */
+            uint8_t vx = c8->V[x];
+            uint8_t vy = c8->V[y];
+            uint8_t flag;
+            if (vx >= vy) {
+                flag = 1; /* no borrow */
+            } else {
+                flag = 0; /* borrow occurred */
+            }
+            c8->V[x] = vx - vy;
+            c8->V[0xF] = flag;
+
+        } else if (n == 6) { /* 8xy6 - SHR Vx */
+            uint8_t flag =
+                c8->V[x] & 0x1; /* save the bit that will be shifted out */
+            c8->V[x] = c8->V[x] >> 1;
+            c8->V[0xF] = flag;
+
+        } else if (n == 7) { /* 8xy7 - SUBN Vx, Vy */
+            uint8_t vx = c8->V[x];
+            uint8_t vy = c8->V[y];
+            uint8_t flag;
+            if (vy >= vx) {
+                flag = 1; /* no borrow */
+            } else {
+                flag = 0; /* borrow occurred */
+            }
+            c8->V[x] = vy - vx;
+            c8->V[0xF] = flag;
+
+        } else if (n == 0xE) { /* 8xyE - SHL Vx */
+            uint8_t flag = (c8->V[x] >> 7) &
+                           0x1; /* save the bit that will be shifted out */
+            c8->V[x] = c8->V[x] << 1;
+            c8->V[0xF] = flag;
+
+        } else {
+            fprintf(stderr, "E: unknown opcode %04X\n", opcode);
+        }
+        break;
+    }
+
     case 0x9: /* 9xy0 - SKP NE Vx, Vy */
         if (n != 0) {
             fprintf(stderr, "E: unknown opcode %04X\n", opcode);
@@ -180,6 +246,14 @@ void chip8_step(struct chip8 *c8)
 
     case 0xA: /* Annn - LD I, addr */
         c8->I = nnn;
+        break;
+
+    case 0xF:             /* Fx__ instructions */
+        if (kk == 0x1E) { /* Fx1E - ADD I, Vx */
+            c8->I = c8->I + c8->V[x];
+        } else {
+            fprintf(stderr, "E: unknown opcode %04X\n", opcode);
+        }
         break;
 
     case 0xD: { /* Dxyn - DRW Vx, Vy, nibble */
