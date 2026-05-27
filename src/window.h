@@ -14,8 +14,9 @@ struct window_config {
 };
 
 bool window_init(const struct window_config *config);
-void window_handle_events(enum interpreter_state *state);
+void window_handle_events(enum interpreter_state *state, struct chip8 *c8);
 void window_draw(const struct chip8 *c8);
+void window_set_sound(bool active);
 void window_destroy(void);
 
 #endif

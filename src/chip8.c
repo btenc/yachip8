@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static const uint8_t chip8_font[FONT_SIZE] = {
@@ -35,7 +36,14 @@ void chip8_init(struct chip8 *c8)
         c8->memory[FONT_START + i] = chip8_font[i];
     }
 
-    c8->should_redraw = true;
+    c8->fx0a_key = -1;
+
+    c8->quirks.vf_reset = true;
+    c8->quirks.memory = true;
+    c8->quirks.display_wait = true;
+    c8->quirks.clipping = true;
+    c8->quirks.shifting = false;
+    c8->quirks.jumping = false;
 }
 
 bool chip8_load_rom(struct chip8 *c8, const char *rom_path)
@@ -106,7 +114,6 @@ void chip8_step(struct chip8 *c8)
             for (size_t i = 0; i < DISPLAY_SIZE; i++) {
                 c8->display[i] = 0;
             }
-            c8->should_redraw = true;
         } else if (opcode == 0x00EE) { /* 00EE - RET */
             if (c8->sp == 0) {
                 fprintf(stderr, "E: stack underflow\n");
@@ -136,19 +143,19 @@ void chip8_step(struct chip8 *c8)
         c8->pc = nnn;
         break;
 
-    case 0x3: /* 3xkk - SKP E Vx, byte */
+    case 0x3: /* 3xkk - SE Vx, byte */
         if (c8->V[x] == kk) {
             c8->pc += 2;
         }
         break;
 
-    case 0x4: /* 4xkk - SKP NE Vx, byte */
+    case 0x4: /* 4xkk - SNE Vx, byte */
         if (c8->V[x] != kk) {
             c8->pc += 2;
         }
         break;
 
-    case 0x5: /* 5xy0 - SKP E Vx, Vy */
+    case 0x5: /* 5xy0 - SE Vx, Vy */
         if (n != 0) {
             fprintf(stderr, "E: unknown opcode %04X\n", opcode);
             break;
@@ -173,12 +180,21 @@ void chip8_step(struct chip8 *c8)
 
         } else if (n == 1) { /* 8xy1 - OR Vx, Vy */
             c8->V[x] = c8->V[x] | c8->V[y];
+            if (c8->quirks.vf_reset) {
+                c8->V[0xF] = 0;
+            }
 
         } else if (n == 2) { /* 8xy2 - AND Vx, Vy */
             c8->V[x] = c8->V[x] & c8->V[y];
+            if (c8->quirks.vf_reset) {
+                c8->V[0xF] = 0;
+            }
 
         } else if (n == 3) { /* 8xy3 - XOR Vx, Vy */
             c8->V[x] = c8->V[x] ^ c8->V[y];
+            if (c8->quirks.vf_reset) {
+                c8->V[0xF] = 0;
+            }
 
         } else if (n == 4) { /* 8xy4 - ADD Vx, Vy */
             uint16_t sum = (uint16_t)c8->V[x] + c8->V[y];
@@ -203,10 +219,14 @@ void chip8_step(struct chip8 *c8)
             c8->V[x] = vx - vy;
             c8->V[0xF] = flag;
 
-        } else if (n == 6) { /* 8xy6 - SHR Vx */
+        } else if (n == 6) { /* 8xy6 - SHR Vx {, Vy} */
+            uint8_t src = c8->V[y];
+            if (c8->quirks.shifting) {
+                src = c8->V[x];
+            }
             uint8_t flag =
-                c8->V[x] & 0x1; /* save the bit that will be shifted out */
-            c8->V[x] = c8->V[x] >> 1;
+                src & 0x1; /* save the bit that will be shifted out */
+            c8->V[x] = src >> 1;
             c8->V[0xF] = flag;
 
         } else if (n == 7) { /* 8xy7 - SUBN Vx, Vy */
@@ -221,10 +241,14 @@ void chip8_step(struct chip8 *c8)
             c8->V[x] = vy - vx;
             c8->V[0xF] = flag;
 
-        } else if (n == 0xE) { /* 8xyE - SHL Vx */
-            uint8_t flag = (c8->V[x] >> 7) &
-                           0x1; /* save the bit that will be shifted out */
-            c8->V[x] = c8->V[x] << 1;
+        } else if (n == 0xE) { /* 8xyE - SHL Vx {, Vy} */
+            uint8_t src = c8->V[y];
+            if (c8->quirks.shifting) {
+                src = c8->V[x];
+            }
+            uint8_t flag =
+                (src >> 7) & 0x1; /* save the bit that will be shifted out */
+            c8->V[x] = src << 1;
             c8->V[0xF] = flag;
 
         } else {
@@ -233,7 +257,7 @@ void chip8_step(struct chip8 *c8)
         break;
     }
 
-    case 0x9: /* 9xy0 - SKP NE Vx, Vy */
+    case 0x9: /* 9xy0 - SNE Vx, Vy */
         if (n != 0) {
             fprintf(stderr, "E: unknown opcode %04X\n", opcode);
             break;
@@ -248,13 +272,92 @@ void chip8_step(struct chip8 *c8)
         c8->I = nnn;
         break;
 
-    case 0xF:             /* Fx__ instructions */
-        if (kk == 0x1E) { /* Fx1E - ADD I, Vx */
+    case 0xB: /* Bnnn - JP V0, addr */
+        if (c8->quirks.jumping) {
+            c8->pc = nnn + c8->V[x];
+        } else {
+            c8->pc = nnn + c8->V[0];
+        }
+        break;
+
+    case 0xC: /* Cxkk - RND Vx, byte */
+        c8->V[x] = (uint8_t)(rand() & 0xFF) & kk;
+        break;
+
+    case 0xF: {           /* Fx__ instructions */
+        if (kk == 0x07) { /* Fx07 - LD Vx, DT */
+            c8->V[x] = c8->delay_timer;
+
+        } else if (kk == 0x0A) { /* Fx0A - LD Vx, K */
+            if (c8->fx0a_key >= 0) {
+                /* a key was pressed, wait for it to be released */
+                if (c8->keypad[(uint8_t)c8->fx0a_key]) {
+                    c8->pc -= 2; /* still held, keep waiting */
+                } else {
+                    c8->V[x] = (uint8_t)c8->fx0a_key; /* released: store key */
+                    c8->fx0a_key = -1;
+                }
+            } else {
+                /* waiting for any key to be pressed */
+                for (uint8_t k = 0; k < NUM_KEYS; k++) {
+                    if (c8->keypad[k]) {
+                        c8->fx0a_key = (int8_t)k;
+                        break;
+                    }
+                }
+                c8->pc -= 2; /* re-execute until pressed then released */
+            }
+
+        } else if (kk == 0x15) { /* Fx15 - LD DT, Vx */
+            c8->delay_timer = c8->V[x];
+
+        } else if (kk == 0x18) { /* Fx18 - LD ST, Vx */
+            c8->sound_timer = c8->V[x];
+
+        } else if (kk == 0x1E) { /* Fx1E - ADD I, Vx */
             c8->I = c8->I + c8->V[x];
+
+        } else if (kk == 0x29) { /* Fx29 - LD F, Vx */
+            c8->I = FONT_START + (c8->V[x] * 5);
+
+        } else if (kk == 0x33) { /* Fx33 - LD B, Vx */
+            if (c8->I + 3 > MEMORY_SIZE) {
+                fprintf(stderr, "E: Fx33 BCD store out of bounds\n");
+                break;
+            }
+            c8->memory[c8->I] = c8->V[x] / 100;
+            c8->memory[c8->I + 1] = (c8->V[x] / 10) % 10;
+            c8->memory[c8->I + 2] = c8->V[x] % 10;
+
+        } else if (kk == 0x55) { /* Fx55 - LD [I], Vx */
+            if (c8->I + x + 1 > MEMORY_SIZE) {
+                fprintf(stderr, "E: Fx55 store out of bounds\n");
+                break;
+            }
+            for (uint8_t i = 0; i <= x; i++) {
+                c8->memory[c8->I + i] = c8->V[i];
+            }
+            if (c8->quirks.memory) {
+                c8->I += x + 1;
+            }
+
+        } else if (kk == 0x65) { /* Fx65 - LD Vx, [I] */
+            if (c8->I + x + 1 > MEMORY_SIZE) {
+                fprintf(stderr, "E: Fx65 load out of bounds\n");
+                break;
+            }
+            for (uint8_t i = 0; i <= x; i++) {
+                c8->V[i] = c8->memory[c8->I + i];
+            }
+            if (c8->quirks.memory) {
+                c8->I += x + 1;
+            }
+
         } else {
             fprintf(stderr, "E: unknown opcode %04X\n", opcode);
         }
         break;
+    }
 
     case 0xD: { /* Dxyn - DRW Vx, Vy, nibble */
         if (c8->I + n > MEMORY_SIZE) {
@@ -269,9 +372,12 @@ void chip8_step(struct chip8 *c8)
 
         for (uint8_t row = 0; row < n; row++) {
             uint8_t screen_y = start_y + row;
-
-            if (screen_y >= DISPLAY_H) {
-                break;
+            if (c8->quirks.clipping) {
+                if (screen_y >= DISPLAY_H) {
+                    break;
+                }
+            } else {
+                screen_y %= DISPLAY_H;
             }
 
             /* each sprite row is stored in 1 byte */
@@ -279,10 +385,12 @@ void chip8_step(struct chip8 *c8)
 
             for (uint8_t col = 0; col < 8; col++) {
                 uint8_t screen_x = start_x + col;
-
-                /* Stop this row if we hit the right edge */
-                if (screen_x >= DISPLAY_W) {
-                    break;
+                if (c8->quirks.clipping) {
+                    if (screen_x >= DISPLAY_W) {
+                        break;
+                    }
+                } else {
+                    screen_x %= DISPLAY_W;
                 }
 
                 /* read each bit from L to R in the row byte */
@@ -304,9 +412,25 @@ void chip8_step(struct chip8 *c8)
             }
         }
 
-        c8->should_redraw = true;
+        if (c8->quirks.display_wait) {
+            c8->waiting_for_vblank = true;
+        }
         break;
     }
+
+    case 0xE:
+        if (kk == 0x9E) { /* Ex9E - SKP Vx */
+            if (c8->V[x] < NUM_KEYS && c8->keypad[c8->V[x]]) {
+                c8->pc += 2;
+            }
+        } else if (kk == 0xA1) { /* ExA1 - SKNP Vx */
+            if (c8->V[x] >= NUM_KEYS || !c8->keypad[c8->V[x]]) {
+                c8->pc += 2;
+            }
+        } else {
+            fprintf(stderr, "E: unknown opcode %04X\n", opcode);
+        }
+        break;
 
     default:
         fprintf(stderr, "E: unknown opcode %04X\n", opcode);

@@ -15,6 +15,15 @@
 #define FONT_START 0x050
 #define FONT_SIZE (16 * 5) /* bytes */
 
+struct chip8_quirks {
+    bool vf_reset;     /* 8xy1/2/3 reset VF to 0 after operation */
+    bool memory;       /* Fx55/Fx65 increment I by x+1 */
+    bool display_wait; /* DRW waits for vblank before continuing */
+    bool clipping;     /* sprites clip at screen edges instead of wrapping */
+    bool shifting;     /* 8xy6/E operate on VX; when off, copies VY first */
+    bool jumping;      /* Bnnn uses VX; when off, uses V0 */
+};
+
 struct chip8 {
     uint8_t memory[MEMORY_SIZE];
 
@@ -29,9 +38,11 @@ struct chip8 {
     uint16_t stack[STACK_SIZE];
 
     uint8_t keypad[NUM_KEYS];
+    int8_t fx0a_key; /* -1 = not waiting, 0-15 = waiting for this key to release */
     uint8_t display[DISPLAY_SIZE];
 
-    bool should_redraw;
+    struct chip8_quirks quirks;
+    bool waiting_for_vblank;
 };
 
 void chip8_init(struct chip8 *c8);

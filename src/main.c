@@ -4,6 +4,8 @@
 
 #include <SDL2/SDL.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
 struct speed_config {
     int steps_per_frame;
@@ -28,6 +30,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    srand((unsigned int)time(NULL));
+
     chip8_init(&c8);
     fprintf(stderr, "I: CHIP-8 Initialized\n");
 
@@ -42,20 +46,21 @@ int main(int argc, char *argv[])
     fprintf(stderr, "I: window initialized\n");
 
     while (state != INTERPRETER_QUIT) {
-        window_handle_events(&state);
+        window_handle_events(&state, &c8);
 
         chip8_tick_timers(&c8);
+        window_set_sound(c8.sound_timer > 0);
 
         if (state == INTERPRETER_RUNNING) {
             for (int i = 0; i < config.speed.steps_per_frame; i++) {
+                if (c8.waiting_for_vblank)
+                    break;
                 chip8_step(&c8);
             }
         }
+        c8.waiting_for_vblank = false;
 
-        if (c8.should_redraw) {
-            window_draw(&c8);
-            c8.should_redraw = false;
-        }
+        window_draw(&c8);
 
         SDL_Delay(config.speed.frame_delay_ms);
     }
