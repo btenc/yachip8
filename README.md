@@ -13,48 +13,55 @@ The goal is to have a spec-correct implementation of the CHIP-8 system, with "co
 ## Status
 
 The project implements all the standard CHIP-8 instructions including quirks.
-It passes all 7 test roms that are included.
+It passes all 7 test roms that are included. (the 8th one is for extensions only.)
 
 <details>
 <summary>1 - CHIP-8 Logo</summary>
 
 ![1-chip8-logo](assets/1.png)
+
 </details>
 
 <details>
 <summary>2 - IBM Logo</summary>
 
 ![2-ibm-logo](assets/2.png)
+
 </details>
 
 <details>
 <summary>3 - Corax+ Opcode Test</summary>
 
 ![3-corax+](assets/3.png)
+
 </details>
 
 <details>
 <summary>4 - Flags Test</summary>
 
 ![4-flags](assets/4.png)
+
 </details>
 
 <details>
 <summary>5 - Quirks Test</summary>
 
 ![5-quirks](assets/5.png)
+
 </details>
 
 <details>
 <summary>6 - Keypad Test</summary>
 
 ![6-keypad](assets/6.png)
+
 </details>
 
 <details>
 <summary>7 - Beep Test</summary>
 
 ![7-beep](assets/7.png)
+
 </details>
 
 ## Compiling and Running
